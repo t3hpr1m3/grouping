@@ -8,4 +8,4 @@ TBD
 
 License
 -------
-cVery simple RESTful server implemented in C.  Mainly for the purposes of gettingresty is released under the [MIT License](http://www.opensource.org/licenses/MIT).
+This code is released under the [MIT License](http://www.opensource.org/licenses/MIT).
