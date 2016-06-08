@@ -101,6 +101,11 @@ describe Grouper do
           grouper.process(match_fields)
         end
 
+        it 'creates the lookup tables' do
+          expect(grouper).to receive(:create_lookup_tables).with(match_fields, csv.headers).once
+          grouper.process(match_fields)
+        end
+
         it 'prints the headers' do
           expect(grouper).to receive(:output).with(
             'Id,FirstName,LastName,Email1,Email2'
@@ -126,6 +131,19 @@ describe Grouper do
           grouper.process(match_fields)
         end
       end
+    end
+  end
+
+  describe '#create_lookup_tables' do
+    let(:match_fields) { ['same_email', 'same_last_name'] }
+    let(:headers) { %w(FirstName LastName Email1 Email2 Phone1 Phone2) }
+
+    it 'finds all matching columns and creates appropriate tables' do
+      grouper = Grouper.new
+      tables = grouper.create_lookup_tables(match_fields, headers)
+      expect(tables).to have_key('LastName')
+      expect(tables).to have_key('Email1')
+      expect(tables).to have_key('Email2')
     end
   end
 end
