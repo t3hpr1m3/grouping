@@ -1,10 +1,18 @@
 require 'active_support/core_ext/object'
-
+require 'securerandom'
 #
 # This has the potential to grow VERY large if processing an extremely large
 # file.  If that becomes an issue, this class could be reworked to wrap
 # something like a sqlite table.
 #
+class Record
+  attr_reader :row
+  attr_accessor :uuid
+
+  def initialize(row)
+    @row = row
+  end
+end
 class Store
   attr_reader :mapping, :tables
 
@@ -14,9 +22,13 @@ class Store
     raise ArgumentError, "No match fields given" if match_fields.empty?
 
     @mapping = {}
+    @tables = {
+      records: {},
+      indices: {}
+    }
 
-    @tables = match_fields.inject({}) do |memo, k|
-      memo[k] = {}
+    match_fields.inject(@tables[:indices]) do |memo, k|
+      memo[k.to_sym] = {}
       memo
     end
   end
@@ -29,41 +41,68 @@ class Store
 
   def put(row)
     # If this is the first put, setup the mapping table
-    if @mapping.empty?
-      @tables.keys.each do |k|
+    if self.mapping.empty?
+      self.tables[:indices].keys.each do |k|
         row.headers.each do |h|
-          if h.underscore.start_with?(k)
-            @mapping[h] = k
+          if h.underscore.start_with?(k.to_s)
+            self.mapping[h] = k
           end
         end
       end
     end
 
-    uuid = nil
-    # See if something in this row already exists
-    row.headers.each do |h|
-      mapping_key = @mapping[h]
-      if mapping_key.present?
-        value = row[h]
-        if @tables[mapping_key].key?(value)
-          # something is already in the table for this field
-          uuid = @tables[mapping_key][value]
-          break
-        end
+    #
+    # First, find any records that "match" this one
+    #
+    ids = []
+    self.mapping.each do |key, value|
+      self.tables[:indices][value].fetch(row[key], []).each do |id|
+        ids << id
+      end
+    end
+    ids.uniq.sort!
+
+    #
+    # If we have any matches, grab the first uuid
+    #
+    if ids.present?
+      uuid = self.tables[:records][ids.first].uuid
+
+      #
+      # Ensure all other matching records have this uuid
+      #
+      ids[1..-1].each do |id|
+        self.tables[:records][id].uuid = uuid
       end
     end
 
-    # if uuid is still nil, nothing from this row matched
+    #
+    # If we don't have a uuid, then there are no records that match.
+    # We'll assign a uuid here.  It may be overwritten later when a
+    # connecting match is found.
+    #
+    id = self.tables[:records].count
     uuid = self.generate_uuid if uuid.nil?
 
-    # this is just writing ALL mapped fields, whether they already existed or
-    # not.  not the most performant, but probably cheaper than checking first
-    row.headers.each do |h|
-      mapping_key = @mapping[h]
-      if mapping_key.present? && row[h].present?
-        @tables[mapping_key][row[h]] = uuid
+    #
+    # Finally, write this record and its index entries
+    #
+    record = Record.new(row)
+    record.uuid = uuid
+    self.tables[:records][id] = record
+    self.mapping.each do |key, value|
+      if row[key].present?
+        self.tables[:indices][value][row[key]] ||= []
+        self.tables[:indices][value][row[key]] << id
       end
     end
-    uuid
+  end
+
+  def generate_uuid
+    SecureRandom.uuid
+  end
+
+  def records
+    self.tables[:records]
   end
 end

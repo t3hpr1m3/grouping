@@ -1,0 +1,29 @@
+#!/usr/bin/env ruby
+$LOAD_PATH.unshift(File.expand_path(File.join(File.dirname(__FILE__), '..')))
+
+require 'rubygems'
+require 'bundler/setup'
+require 'optparse'
+require 'ostruct'
+
+options = OpenStruct.new
+
+opt_parser = OptionParser.new do |opt|
+  opt.banner = 'Usage: grouper [OPTIONS] FILENAME'
+  opt.separator ''
+  opt.separator 'Groups matching records in FILENAME, and prints the result to STDOUT'
+  opt.separator ''
+
+  opt.on('-m', '--match-fields FIELDS', Array, 'Fields to use for grouping.  Each field can be a', 'prefix to match on multiple similar fields', '(ex. email => Email1, Email2)') do |m|
+    options.match_fields = m
+  end
+end
+
+opt_parser.parse!(ARGV)
+input_file = ARGV.first
+raise OptionParser::MissingArgument if options.match_fields.nil? || input_file.nil?
+
+require 'grouper'
+
+g = Grouper.new(input_file, options.match_fields)
+g.process

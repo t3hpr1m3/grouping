@@ -1,3 +1,7 @@
+#!/usr/bin/env ruby
+
+$LOAD_PATH.unshift(File.expand_path(File.join(File.dirname(__FILE__))))
+
 require 'csv'
 require 'store'
 require 'active_support/core_ext/object'
@@ -21,18 +25,24 @@ class Grouper
     @store = Store.new(match_fields)
   end
 
-  def process(match_fields = [])
+  def process
     f = File.open(@filename, "r")
-    csv = CSV.new(@filename, headers: true)
-    headers_printed = false
+    csv = CSV.new(f, headers: true)
     csv.each do |row|
-      unless headers_printed
-        output "Id,#{row.headers.join(',')}"
-        headers_printed = true
-      end
-      id = @store.put(row)
-      output "#{id},#{row.to_csv}"
+      @store.put(row)
     end
     f.close
+    headers_printed = false
+    @store.records.each do |id, record|
+      unless headers_printed
+        output "Id,#{record.row.headers.join(',')}"
+        headers_printed = true
+      end
+      output "#{record.uuid},#{record.row.to_csv}"
+    end
+  end
+
+  def output(msg)
+    puts msg
   end
 end
