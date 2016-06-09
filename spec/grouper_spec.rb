@@ -19,13 +19,13 @@ describe Grouper do
 
   describe '#process' do
     let(:grouper) { Grouper.new('test.csv', %w(email)) }
-    let(:headers) { %w(RowHeaders) }
-    let(:row1) { double('CSV::Row', headers: %w(Row1Headers), to_csv: 'Row1Data') }
-    let(:row2) { double('CSV::Row', headers: %w(Row2Headers), to_csv: 'Row2Data') }
-    let(:row3) { double('CSV::Row', headers: %w(Row3Headers), to_csv: 'Row3Data') }
+    let(:headers) { 'RowHeaders' }
+    let(:row1) { double('Record', to_csv: 'Row1Data') }
+    let(:row2) { double('Record', to_csv: 'Row2Data') }
+    let(:row3) { double('Record', to_csv: 'Row3Data') }
     let(:csv) { double('CSV') }
     let(:file) { double('File', close: nil) }
-    let(:store) { double('Store', put: '1111') }
+    let(:store) { double('Store', put: nil, records: {0 => row1, 1 => row2, 2 => row3}, headers: headers) }
 
     before do
       allow(Store).to receive(:new).and_return(store)
@@ -47,21 +47,20 @@ describe Grouper do
 
     it 'prints the headers' do
       expect(grouper).to receive(:output).with(
-        'Id,Row1Headers'
+        'RowHeaders'
       )
       grouper.process
     end
 
-    it 'looks up the Id for each row' do
+    it 'adds all the records to the store' do
       expect(store).to receive(:put).exactly(3).times
       grouper.process
     end
 
     it 'prints each row, including the Id' do
-      allow(grouper).to receive(:store_row).and_return('1')
-      expect(grouper).to receive(:output).with('1111,Row1Data')
-      expect(grouper).to receive(:output).with('1111,Row2Data')
-      expect(grouper).to receive(:output).with('1111,Row3Data')
+      expect(grouper).to receive(:output).with('Row1Data')
+      expect(grouper).to receive(:output).with('Row2Data')
+      expect(grouper).to receive(:output).with('Row3Data')
       grouper.process
     end
 

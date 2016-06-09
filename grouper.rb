@@ -32,13 +32,9 @@ class Grouper
       @store.put(row)
     end
     f.close
-    headers_printed = false
-    @store.records.each do |id, record|
-      unless headers_printed
-        output "Id,#{record.row.headers.join(',')}"
-        headers_printed = true
-      end
-      output "#{record.uuid},#{record.row.to_csv}"
+    output @store.headers
+    @store.records.each do |record|
+      output record.to_csv
     end
   end
 

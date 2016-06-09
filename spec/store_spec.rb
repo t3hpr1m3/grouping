@@ -9,7 +9,7 @@ describe Store do
 
   it 'initializes a valid starter table' do
     store = Store.new(%w(email))
-    expect(store.tables).to include({ records: {}, indices: { email: {} } })
+    expect(store.tables).to include({ records: [], indices: { email: {} } })
   end
 
   it 'initializes an empty mapping' do

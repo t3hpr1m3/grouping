@@ -12,6 +12,10 @@ class Record
   def initialize(row)
     @row = row
   end
+
+  def to_csv
+    "#{uuid},#{row.to_csv}"
+  end
 end
 class Store
   attr_reader :mapping, :tables
@@ -23,7 +27,7 @@ class Store
 
     @mapping = {}
     @tables = {
-      records: {},
+      records: [],
       indices: {}
     }
 
@@ -33,9 +37,18 @@ class Store
     end
   end
 
+  def headers
+    if @tables[:records].present?
+      "Id,#{@tables[:records][0].row.headers.to_csv}"
+    else
+      ""
+    end
+  end
+
   def clear
-    @tables.keys.each do |k|
-      @tables[k] = {}
+    @tables[:records] = []
+    @tables[:indices].keys.each do |k|
+      @tables[:indices][k] = {}
     end
   end
 
@@ -81,7 +94,6 @@ class Store
     # We'll assign a uuid here.  It may be overwritten later when a
     # connecting match is found.
     #
-    id = self.tables[:records].count
     uuid = self.generate_uuid if uuid.nil?
 
     #
@@ -89,8 +101,12 @@ class Store
     #
     record = Record.new(row)
     record.uuid = uuid
-    self.tables[:records][id] = record
+    id = self.tables[:records].length
+    self.tables[:records] << record
     self.mapping.each do |key, value|
+      #
+      # don't write empty keys
+      #
       if row[key].present?
         self.tables[:indices][value][row[key]] ||= []
         self.tables[:indices][value][row[key]] << id
