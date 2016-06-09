@@ -1,6 +1,6 @@
 FROM ruby:2.2.1
 
-RUN mkdir -p /usr/src/app
+RUN mkdir -p /usr/src/app /input
 
 WORKDIR /usr/src/app
 
@@ -10,4 +10,4 @@ RUN bundle install
 
 ADD . /usr/src/app
 
-CMD ["bundle", "exec", "rspec"]
+ENTRYPOINT ["/usr/src/app/bin/grouper"]
